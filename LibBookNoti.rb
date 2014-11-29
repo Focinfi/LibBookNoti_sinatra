@@ -1,8 +1,8 @@
 require 'sinatra'
 require './lib_book_kit.rb'
-set :server, %w[WEBrick]
+set :server, %w[webrick]
 set :port, 1025
-set :bind, 'http://121.40.83.163/'
+# set :bind, 'http://121.40.83.163/'
 get '/borrowed_books' do
 	params[:user_number] ||= ""
 	params[:user_passwd] ||= ""
