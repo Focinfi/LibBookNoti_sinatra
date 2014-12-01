@@ -11,7 +11,8 @@ module ParaseBookListDoc
 	end
 
 	def list_titles_from(doc)
-		(doc.shift.td.map { |t| t.content }).first(7)
+		#(doc.shift.td.map { |t| t.content }).first(7)
+    ['book_id', 'title', 'author', 'borrowed_date', 'return_date', 'lib_location', 'attachment']
 	end
 
 	def book_list_arr_form(doc)
@@ -77,7 +78,7 @@ module MakeJsonFormat
 		list.each_with_index do |item, index|
 			result << "{"
 			item.each_with_index do |value, index|
-				result << titles[index] << ":" << value if value
+        result << '"' << titles[index] << '"' << ":" << '"' <<  value << '"' if value
 				result << "," unless index == 6
 				# puts value
 			end
