@@ -10,17 +10,18 @@ module ParaseBookListDoc
 		end	
 	end
 
-	def list_titles_from(doc)
-		#(doc.shift.td.map { |t| t.content }).first(7)
+	def list_titles_from(doc = nil)
+    #(doc.shift.td.map { |t| t.content }).first(7)
     ['book_id', 'title', 'author', 'borrowed_date', 'return_date', 'lib_location', 'attachment']
 	end
 
 	def book_list_arr_form(doc)
 		book_list_arr = []
+    doc.shift
 		doc.each do |item|
 			tds = item.td
 			tds.pop
-			book_list_arr << tds.map.with_index { |t, i| t.content }
+			book_list_arr << tds.map.with_index { |t, i| t.content.squeeze.strip }
 		end
 
 		book_list_arr
@@ -100,7 +101,7 @@ class  BookListReader
 	def borrowed_book_list(num, passwd)
 		html_str = get_list_doc(nil, login(num, passwd))
 		doc = book_list_doc(html_str)
-		titles = list_titles_from(doc) if doc
+		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
 		make_json_from(entries, titles) if entries
 		# File.open('./lib_book_list.html').to_s
