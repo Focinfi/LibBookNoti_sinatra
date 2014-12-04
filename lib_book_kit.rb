@@ -1,7 +1,11 @@
 require 'net/http'
 require 'nokogiri'
 
-module ParaseBookListDoc
+module ParaseHtml
+	def html_login?(html_str = "")
+		result = html_str.match(/caption/).nil?
+	end
+
 	def book_list_doc(html_str = "", book_list_path = "#mylib_content table tr")
 		begin 
 			Nokogiri::Slop(html_str).div(css: book_list_path)
@@ -21,7 +25,7 @@ module ParaseBookListDoc
 		doc.each do |item|
 			tds = item.td
 			tds.pop
-			book_list_arr << tds.map.with_index { |t, i| t.content.squeeze.strip }
+			book_list_arr << tds.map.with_index { |t, i| t.content.strip }
 		end
 
 		book_list_arr
@@ -38,12 +42,17 @@ module Login
 				"&passwd=" + 
 				passwd)			
 		res = Net::HTTP.get_response(login_uri)
-		@cookie = res['Set-Cookie']
+		@cookie = res['Set-Cookie']		
+		
+		if (html_login? res.body)
+			json_body_wrapper("200", "Login Succeed", 
+				enclose_hash_josn("cookie" => @cookie))
+		else
+			json_body_wrapper("200", "Login Fail", 
+				enclose_hash_josn("cookie" => "null"))
+		end
 	end
 
-	def cookie
-		@cookie
-	end
 end
 
 module GetListDoc
@@ -63,7 +72,7 @@ module GetListDoc
 end
 
 module RenewBook
-	def renew_book(url, cookiem, book_id)
+	def renew_book(url, cookie, book_id)
 		http = Net::HTTP.new("202.119.228.6", 8080)
 		path = '/reader/ajax_renew.php?'
 		headers = { 'Cookie' => cookie }
@@ -74,41 +83,62 @@ module RenewBook
 end
 
 module MakeJsonFormat
-	def make_json_from(list, titles)
+	def json_body_wrapper(code, message, body)
+		"{" <<
+			enclose_hash_josn("code" => code) << "," << 
+			enclose_hash_josn("message" => message) << "," << 
+			enclose_word("body") << ":" << enclose_object(body) << 
+			"}"
+	end
+
+	def book_list_json(list, titles)
 		result = "[";
 		list.each_with_index do |item, index|
 			result << "{"
 			item.each_with_index do |value, index|
-        result << '"' << titles[index] << '"' << ":" << '"' <<  value << '"' if value
+        result << enclose_hash_josn(titles[index] => value) if value
 				result << "," unless index == 6
-				# puts value
 			end
 			result << "},"
-			# puts item.class
 		end
+		
 		result << "]"
 		result.gsub!(/,\]/, "]")
+	end
+
+	def enclose_hash_josn(hash)
+		key, value = hash.to_a.first[0].to_s, hash.to_a.first[1].to_s
+		enclose_word(key) << ":" << enclose_word(value) 
+	end
+
+	def enclose_word(word = "null")
+		"\"#{word}\""
+	end
+
+	def enclose_object(string = nil)
+		"{#{string}}"
 	end
 end
 
 module BookListKit
-	include Login, GetListDoc, ParaseBookListDoc, RenewBook, MakeJsonFormat
+	include Login, GetListDoc, ParaseHtml, RenewBook, MakeJsonFormat
 end
 
 class  BookListReader
 	include BookListKit
 
-	def borrowed_book_list(num, passwd)
-		html_str = get_list_doc(nil, login(num, passwd))
+	def borrowed_book_list(cookie)
+		html_str = get_list_doc(nil, cookie)
 		doc = book_list_doc(html_str)
 		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
-		make_json_from(entries, titles) if entries
-		# File.open('./lib_book_list.html').to_s
+		json_body_wrapper("200", "book_list_json", 
+			enclose_word("book_list") << ":" << book_list_json(entries, titles)) if entries
 	end
 
-	def renew(num, passwd, book_id)
-		renew_book(nil, login(num, passwd), book_id)
+	def renew(cookie, book_id)
+		json_body_wrapper("200", "renew_book_json", 
+			enclose_hash_josn("renew_book_result" => renew_book(nil, cookie, book_id)))
 	end
 
 end
