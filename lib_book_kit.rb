@@ -132,13 +132,18 @@ class  BookListReader
 		doc = book_list_doc(html_str)
 		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
+    if entries
+      book_list = book_list_json(entries, titles)
+    else
+      book_list = enclose_word("null")
+    end
 		json_body_wrapper("200", "book_list_json", 
-			enclose_word("book_list") << ":" << book_list_json(entries, titles)) if entries
-	end
+			enclose_word("book_list") << ":" << book_list) 
+  end
 
 	def renew(cookie, book_id)
 		json_body_wrapper("200", "renew_book_json", 
-			enclose_hash_josn("renew_book_result" => renew_book(nil, cookie, book_id)))
+      enclose_hash_josn("renew_book_result" => renew_book(nil, cookie, book_id)))
 	end
 
 end
