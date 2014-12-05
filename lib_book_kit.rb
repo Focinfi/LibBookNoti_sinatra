@@ -1,3 +1,4 @@
+# encoding utf-8
 require 'net/http'
 require 'nokogiri'
 
@@ -20,21 +21,48 @@ module ParaseHtml
 
 	def list_titles_from(doc = nil)
     #(doc.shift.td.map { |t| t.content }).first(7)
-    ['book_id', 'title', 'author', 'borrowed_date', 'return_date', 'lib_location', 'attachment']
+    %w{ 
+     book_id
+     title
+     author
+     borrowed_date
+     return_date
+     lib_location
+     attachment
+     description
+    }
 	end
 
 	def book_list_arr_form(doc)
+		href_list = book_href_list_from(doc)
 		book_list_arr = []
     doc.shift
-		doc.each do |item|
+		doc.each_with_index do |item, index|
 			tds = item.td
 			tds.pop
-			book_list_arr << tds.map.with_index { |t, i| t.content.strip }
+			book_list_arr << tds.map { |t| t.content.strip }
+			book_list_arr[index] << book_description_str(get_book_detail_doc href_list[index])
 		end
 
 		book_list_arr
 	end
-end	
+
+	def book_href_list_from(doc)
+		book_href_list = []
+		doc.shift
+		doc.each do |item|
+			# book_href_list << item.td[1].child.methods.grep(/attr/) { |match| match }
+			href = "http://202.119.228.6:8080" << item.td[1].child.attr(:href).gsub(/^\.\./, "")
+			book_href_list << href
+		end
+		book_href_list
+	end	
+
+	def book_description_str(doc)
+		desc = Nokogiri::Slop(doc).div(css: "#s_c_left .booklist dd")[-2].content
+	end
+
+end
 
 module Login
 	def login(number, passwd)
@@ -73,6 +101,10 @@ module GetListDoc
 		http.post(path, nil, headers).body
 	end
 
+	def get_book_detail_doc(href)
+		Net::HTTP.get_response(URI(href)).body
+	end
+
 end
 
 module RenewBook
@@ -101,13 +133,14 @@ module MakeJsonFormat
 			result << "{"
 			item.each_with_index do |value, index|
         result << enclose_hash_josn(titles[index] => value) if value
-				result << "," unless index == 6
+				result << ","
 			end
 			result << "},"
 		end
 		
 		result << "]"
 		result.gsub!(/,\]/, "]")
+		result.gsub!(/,\}/, "}")
 	end
 
 	def enclose_hash_josn(hash)
@@ -144,12 +177,11 @@ class  BookListReader
 		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
     
-    book_list =  entries.nil? ? "null" : book_list_json(entries, titles)
+  	book_list =  entries.nil? ? "null" : book_list_json(entries, titles)
 
 		json_body_wrapper("200", "Get Book List Succeed", 
 			enclose_word("book_list") << ":" << book_list) 
-		# html_str.match(/login/).to_s
-		# html_str
+		# book_href_list_from(doc)
   end
 
 	def renew(cookie, book_id)
@@ -163,6 +195,10 @@ class  BookListReader
 		json_body_wrapper("200", "Get Renew Book Result Succeed", 
       enclose_hash_josn("renew_book_result" => result))
 	end
+
+	# def test_book_detail_list
+		
+	# end
 
 end
 
