@@ -3,7 +3,11 @@ require 'nokogiri'
 
 module ParaseHtml
 	def html_login?(html_str = "")
-		return html_str.match(/login\.php/).nil?
+		return html_str.match(/caption/).nil?
+	end
+
+	def html_cookie_ok?(html_str = "")
+		return !html_str.match(/logout\.php/).nil?
 	end
 
 	def book_list_doc(html_str = "", book_list_path = "#mylib_content table tr")
@@ -34,8 +38,6 @@ end
 
 module Login
 	def login(number, passwd)
-		number ||= ""
-		passwd ||= ""
 		login_uri = 
 			URI("http://202.119.228.6:8080/reader/redr_verify.php?select=cert_no&number=" +
 				number +
@@ -51,6 +53,8 @@ module Login
 			json_body_wrapper("401", "Login Fail", 
 				enclose_hash_josn("cookie" => nil))
 		end
+		# return html_login?(res.body).to_s
+		# res.body
 	end
 
 end
@@ -112,7 +116,6 @@ module MakeJsonFormat
 	end
 
 	def enclose_word(word = nil)
-		# "\"#{word}\""
 		return "\"#{word}\"" if word
 		"null"
 	end
@@ -132,7 +135,7 @@ class  BookListReader
 
 	def borrowed_book_list(cookie)
 		html_str = get_list_doc(nil, cookie)
-		unless html_login?(html_str)
+		unless html_cookie_ok?(html_str)
 			return json_body_wrapper("401", "Expired Cookie", 
 							 enclose_word("book_list") << ":" << "null")
 		end
@@ -145,6 +148,7 @@ class  BookListReader
 
 		json_body_wrapper("200", "book_list_json", 
 			enclose_word("book_list") << ":" << book_list) 
+		# html_str.match(/login/).to_s
 		# html_str
   end
 
