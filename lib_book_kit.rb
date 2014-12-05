@@ -146,7 +146,7 @@ class  BookListReader
     
     book_list =  entries.nil? ? "null" : book_list_json(entries, titles)
 
-		json_body_wrapper("200", "book_list_json", 
+		json_body_wrapper("200", "Get Book List Succeed", 
 			enclose_word("book_list") << ":" << book_list) 
 		# html_str.match(/login/).to_s
 		# html_str
@@ -160,7 +160,7 @@ class  BookListReader
 							 enclose_word("renew_book_result") << ":" << "null")
 		end
 		
-		json_body_wrapper("200", "renew_book_json", 
+		json_body_wrapper("200", "Get Renew Book Result Succeed", 
       enclose_hash_josn("renew_book_result" => result))
 	end
 
