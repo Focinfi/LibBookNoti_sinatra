@@ -3,7 +3,7 @@ require 'nokogiri'
 
 module ParaseHtml
 	def html_login?(html_str = "")
-		result = html_str.match(/caption/).nil?
+		return html_str.match(/login\.php/).nil?
 	end
 
 	def book_list_doc(html_str = "", book_list_path = "#mylib_content table tr")
@@ -132,8 +132,8 @@ class  BookListReader
 
 	def borrowed_book_list(cookie)
 		html_str = get_list_doc(nil, cookie)
-		if(html_login?(html_str))
-			return json_body_wrapper("401", "Login Fail", 
+		unless html_login?(html_str)
+			return json_body_wrapper("401", "Expired Cookie", 
 							 enclose_word("book_list") << ":" << "null")
 		end
 
@@ -141,21 +141,18 @@ class  BookListReader
 		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
     
-    if entries
-      book_list = book_list_json(entries, titles)
-    else
-      book_list = "null"
-    end
+    book_list =  entries.nil? ? "null" : book_list_json(entries, titles)
 
 		json_body_wrapper("200", "book_list_json", 
 			enclose_word("book_list") << ":" << book_list) 
+		# html_str
   end
 
 	def renew(cookie, book_id)
 		result = renew_book(nil, cookie, book_id)
 
 		if result.length == 0
-			return json_body_wrapper("401", "Login Fail", 
+			return json_body_wrapper("401", "Expired Cookie", 
 							 enclose_word("renew_book_result") << ":" << "null")
 		end
 		
