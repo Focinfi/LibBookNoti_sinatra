@@ -2,7 +2,7 @@ require 'sinatra'
 require './lib_book_kit.rb'
 set :server, %w[thin]
 set :port, 1025
-# set :bind, '121.40.83.163'
+set :bind, '121.40.83.163'
 
 get '/login' do 
 	params[:user_number] ||= ""
