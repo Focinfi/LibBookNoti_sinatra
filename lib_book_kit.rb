@@ -48,8 +48,8 @@ module Login
 			json_body_wrapper("200", "Login Succeed", 
 				enclose_hash_josn("cookie" => @cookie))
 		else
-			json_body_wrapper("200", "Login Fail", 
-				enclose_hash_josn("cookie" => "null"))
+			json_body_wrapper("401", "Login Fail", 
+				enclose_hash_josn("cookie" => nil))
 		end
 	end
 
@@ -107,16 +107,19 @@ module MakeJsonFormat
 	end
 
 	def enclose_hash_josn(hash)
-		key, value = hash.to_a.first[0].to_s, hash.to_a.first[1].to_s
+		key, value = hash.to_a.first[0].to_s, hash.to_a.first[1]
 		enclose_word(key) << ":" << enclose_word(value) 
 	end
 
-	def enclose_word(word = "null")
-		"\"#{word}\""
+	def enclose_word(word = nil)
+		# "\"#{word}\""
+		return "\"#{word}\"" if word
+		"null"
 	end
 
 	def enclose_object(string = nil)
-		"{#{string}}"
+		return "{#{string}}" if string
+		"null"			
 	end
 end
 
@@ -129,21 +132,35 @@ class  BookListReader
 
 	def borrowed_book_list(cookie)
 		html_str = get_list_doc(nil, cookie)
+		if(html_login?(html_str))
+			return json_body_wrapper("401", "Login Fail", 
+							 enclose_word("book_list") << ":" << "null")
+		end
+
 		doc = book_list_doc(html_str)
 		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
+    
     if entries
       book_list = book_list_json(entries, titles)
     else
-      book_list = enclose_word("null")
+      book_list = "null"
     end
+
 		json_body_wrapper("200", "book_list_json", 
 			enclose_word("book_list") << ":" << book_list) 
   end
 
 	def renew(cookie, book_id)
+		result = renew_book(nil, cookie, book_id)
+
+		if result.length == 0
+			return json_body_wrapper("401", "Login Fail", 
+							 enclose_word("renew_book_result") << ":" << "null")
+		end
+		
 		json_body_wrapper("200", "renew_book_json", 
-      enclose_hash_josn("renew_book_result" => renew_book(nil, cookie, book_id)))
+      enclose_hash_josn("renew_book_result" => result))
 	end
 
 end
