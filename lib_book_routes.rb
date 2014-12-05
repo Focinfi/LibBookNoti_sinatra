@@ -1,8 +1,12 @@
 require 'sinatra'
 require './lib_book_kit.rb'
+
+ip = ARGV[0] || 'localhost'
+port = ARGV[1] || "1025"
+
 set :server, %w[thin]
-set :port, 1025
-set :bind, '121.40.83.163'
+set :bind, ip
+set :port, port.to_i
 
 get '/login' do 
 	params[:user_number] ||= ""
