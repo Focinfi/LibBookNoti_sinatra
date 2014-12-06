@@ -8,31 +8,31 @@ module ParseHtml
     return html_str.match(/caption/).nil?
   end
 
-	def html_cookie_ok?(html_str = "")
-		return !html_str.match(/logout\.php/).nil?
-	end
+  def html_cookie_ok?(html_str = "")
+    return !html_str.match(/logout\.php/).nil?
+  end
 
-	def book_list_doc(html_str = "", book_list_path = "#mylib_content table tr")
-		begin 
-			Nokogiri::Slop(html_str).div(css: book_list_path)
-		rescue Exception
-			nil
-		end	
-	end
+  def book_list_doc(html_str = "", book_list_path = "#mylib_content table tr")
+    begin 
+      Nokogiri::Slop(html_str).div(css: book_list_path)
+    rescue Exception
+      nil
+    end	
+  end
 
-	def list_titles
+  def list_titles
     #(doc.shift.td.map { |t| t.content }).first(7)
     %w{ 
-     book_id
-     title
-     author
-     borrowed_date
-     return_date
-     lib_location
-     attachment
-     description
-    }
-	end
+      book_id
+      title
+      author
+      borrowed_date
+      return_date
+      lib_location
+      attachment
+      description
+      }
+  end
 
 	def book_list_arr_form(doc)
 		href_list = book_href_list_from(doc)
