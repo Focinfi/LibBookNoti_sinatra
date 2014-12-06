@@ -37,7 +37,7 @@ module ParseHtml
   def book_list_arr_form(doc)
     href_list = book_href_list_from(doc)
     book_list_arr = []
-    doc.shift
+    # doc.shift
     doc.each_with_index do |item, index|
       tds = item.td
       tds.pop
