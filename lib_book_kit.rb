@@ -4,9 +4,9 @@ require 'nokogiri'
 require 'json'
 
 module ParseHtml
-	def html_login?(html_str = "")
-		return html_str.match(/caption/).nil?
-	end
+  def html_login?(html_str = "")
+    return html_str.match(/caption/).nil?
+  end
 
 	def html_cookie_ok?(html_str = "")
 		return !html_str.match(/logout\.php/).nil?
