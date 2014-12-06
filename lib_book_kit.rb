@@ -1,6 +1,7 @@
 # encoding utf-8
 require 'net/http'
 require 'nokogiri'
+require 'json'
 
 module ParaseHtml
 	def html_login?(html_str = "")
@@ -19,7 +20,7 @@ module ParaseHtml
 		end	
 	end
 
-	def list_titles_from(doc = nil)
+	def list_titles
     #(doc.shift.td.map { |t| t.content }).first(7)
     %w{ 
      book_id
@@ -40,8 +41,10 @@ module ParaseHtml
 		doc.each_with_index do |item, index|
 			tds = item.td
 			tds.pop
-			book_list_arr << tds.map { |t| t.content.strip }
-			book_list_arr[index] << book_description_str(get_book_detail_doc href_list[index])
+			item_hash = {}
+			tds.map.with_index { |t, i| item_hash[list_titles[i]] = t.content.strip }
+			item_hash[list_titles.last] = book_description_str(get_book_detail_doc href_list[index])
+			book_list_arr << item_hash
 		end
 
 		book_list_arr
@@ -71,24 +74,23 @@ module Login
 				number +
 				"&passwd=" + 
 				passwd)			
-		res = Net::HTTP.get_response(login_uri)
+		res = get_login_res(login_uri)
 		@cookie = res['Set-Cookie']		
 		
 		if (html_login? res.body)
-			json_body_wrapper("200", "Login Succeed", 
-				enclose_hash_josn("cookie" => @cookie))
+			json_body_wrapper("200", "Login Succeed", { cookie: @cookie })
 		else
-			json_body_wrapper("401", "Login Fail", 
-				enclose_hash_josn("cookie" => nil))
+			json_body_wrapper("401", "Login Fail", nil)
 		end
-		# return html_login?(res.body).to_s
-		# res.body
 	end
 
 end
 
-module GetListDoc
-	include Login
+module GetHtmlStr
+
+	def get_login_res(url)
+		Net::HTTP.get_response(url)
+	end
 
 	def get_list_doc(url, cookie)
 		http = Net::HTTP.new("202.119.228.6", 8080)
@@ -105,10 +107,7 @@ module GetListDoc
 		Net::HTTP.get_response(URI(href)).body
 	end
 
-end
-
-module RenewBook
-	def renew_book(url, cookie, book_id)
+	def get_renew_result(url, cookie, book_id)
 		http = Net::HTTP.new("202.119.228.6", 8080)
 		path = '/reader/ajax_renew.php?'
 		headers = { 'Cookie' => cookie }
@@ -116,51 +115,23 @@ module RenewBook
 		html_str = http.post(path, data, headers).body
 		Nokogiri::HTML(html_str).xpath('//font').text
 	end
+
 end
 
-module MakeJsonFormat
+module MakeJsonStr
 	def json_body_wrapper(code, message, body)
-		"{" <<
-			enclose_hash_josn("code" => code) << "," << 
-			enclose_hash_josn("message" => message) << "," << 
-			enclose_word("body") << ":" << enclose_object(body) << 
-			"}"
-	end
+		res_hash = {
+			code: code,
+			message: message,
+			body: body
+		}
 
-	def book_list_json(list, titles)
-		result = "[";
-		list.each_with_index do |item, index|
-			result << "{"
-			item.each_with_index do |value, index|
-        result << enclose_hash_josn(titles[index] => value) if value
-				result << ","
-			end
-			result << "},"
-		end
-		
-		result << "]"
-		result.gsub!(/,\]/, "]")
-		result.gsub!(/,\}/, "}")
-	end
-
-	def enclose_hash_josn(hash)
-		key, value = hash.to_a.first[0].to_s, hash.to_a.first[1]
-		enclose_word(key) << ":" << enclose_word(value) 
-	end
-
-	def enclose_word(word = nil)
-		return "\"#{word}\"" if word
-		"null"
-	end
-
-	def enclose_object(string = nil)
-		return "{#{string}}" if string
-		"null"			
+		JSON.generate res_hash
 	end
 end
 
 module BookListKit
-	include Login, GetListDoc, ParaseHtml, RenewBook, MakeJsonFormat
+	include Login, GetHtmlStr, ParaseHtml, MakeJsonStr
 end
 
 class  BookListReader
@@ -168,37 +139,25 @@ class  BookListReader
 
 	def borrowed_book_list(cookie)
 		html_str = get_list_doc(nil, cookie)
+		
 		unless html_cookie_ok?(html_str)
-			return json_body_wrapper("401", "Expired Cookie", 
-							 enclose_word("book_list") << ":" << "null")
+			return json_body_wrapper("401", "Expired Cookie", nil)
 		end
 
 		doc = book_list_doc(html_str)
-		titles = list_titles_from if doc
 		entries = book_list_arr_form(doc) if doc
-    
-  	book_list =  entries.nil? ? "null" : book_list_json(entries, titles)
-
-		json_body_wrapper("200", "Get Book List Succeed", 
-			enclose_word("book_list") << ":" << book_list) 
-		# book_href_list_from(doc)
+		json_body_wrapper("200", "Get Book List Succeed", entries) 
   end
+  
 
 	def renew(cookie, book_id)
-		result = renew_book(nil, cookie, book_id)
+		result = get_renew_result(nil, cookie, book_id)
 
 		if result.length == 0
-			return json_body_wrapper("401", "Expired Cookie", 
-							 enclose_word("renew_book_result") << ":" << "null")
-		end
-		
-		json_body_wrapper("200", "Get Renew Book Result Succeed", 
-      enclose_hash_josn("renew_book_result" => result))
+			return json_body_wrapper("401", "Expired Cookie", nil)
+		end		
+		json_body_wrapper("200", "Get Renew Book Result Succeed", { renew_result: result })
 	end
-
-	# def test_book_detail_list
-		
-	# end
 
 end
 

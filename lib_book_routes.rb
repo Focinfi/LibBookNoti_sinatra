@@ -20,7 +20,7 @@ get '/borrowed_books' do
 end
 
 get '/renew_book' do 
-	params[:cookie]
+	params[:cookie] ||= ""
 	params[:book_id] ||= ""
 	BookListReader.new.renew(params[:cookie], params[:book_id])
 end
