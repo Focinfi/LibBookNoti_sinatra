@@ -3,7 +3,7 @@ require 'net/http'
 require 'nokogiri'
 require 'json'
 
-module ParaseHtml
+module ParseHtml
 	def html_login?(html_str = "")
 		return html_str.match(/caption/).nil?
 	end
@@ -78,9 +78,9 @@ module Login
 		@cookie = res['Set-Cookie']		
 		
 		if (html_login? res.body)
-			json_body_wrapper("200", "Login Succeed", { cookie: @cookie })
+			json_wrapper("200", "Login Succeed", { cookie: @cookie })
 		else
-			json_body_wrapper("401", "Login Fail", nil)
+			json_wrapper("401", "Login Fail", nil)
 		end
 	end
 
@@ -119,7 +119,7 @@ module GetHtmlStr
 end
 
 module MakeJsonStr
-	def json_body_wrapper(code, message, body)
+	def json_wrapper(code, message, body)
 		res_hash = {
 			code: code,
 			message: message,
@@ -131,7 +131,7 @@ module MakeJsonStr
 end
 
 module BookListKit
-	include Login, GetHtmlStr, ParaseHtml, MakeJsonStr
+	include Login, GetHtmlStr, ParseHtml, MakeJsonStr
 end
 
 class  BookListReader
@@ -141,12 +141,12 @@ class  BookListReader
 		html_str = get_list_doc(nil, cookie)
 		
 		unless html_cookie_ok?(html_str)
-			return json_body_wrapper("401", "Expired Cookie", nil)
+			return json_wrapper("401", "Expired Cookie", nil)
 		end
 
 		doc = book_list_doc(html_str)
 		entries = book_list_arr_form(doc) if doc
-		json_body_wrapper("200", "Get Book List Succeed", entries) 
+		json_wrapper("200", "Get Book List Succeed", entries) 
   end
   
 
@@ -154,9 +154,9 @@ class  BookListReader
 		result = get_renew_result(nil, cookie, book_id)
 
 		if result.length == 0
-			return json_body_wrapper("401", "Expired Cookie", nil)
+			return json_wrapper("401", "Expired Cookie", nil)
 		end		
-		json_body_wrapper("200", "Get Renew Book Result Succeed", { renew_result: result })
+		json_wrapper("200", "Get Renew Book Result Succeed", { renew_result: result })
 	end
 
 end
