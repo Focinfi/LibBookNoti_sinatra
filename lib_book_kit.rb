@@ -31,6 +31,7 @@ module ParseHtml
       lib_location
       attachment
       description
+      img_url
       }
   end
 
@@ -43,7 +44,8 @@ module ParseHtml
       tds.pop
       item_hash = {}
       tds.map.with_index { |t, i| item_hash[list_titles[i]] = t.content.strip }
-      item_hash[list_titles.last] = book_description_str(get_book_detail_doc href_list[index])
+      item_hash["description"] = book_description_str(get_book_detail_doc href_list[index])
+      item_hash["img_url"] = douban_img_url_from(get_douban_book_html(item_hash["title"]))
       book_list_arr << item_hash
     end
 
@@ -63,6 +65,13 @@ module ParseHtml
 
   def book_description_str(doc)
     desc = Nokogiri::Slop(doc).div(css: "#s_c_left .booklist dd")[-2].content
+  end
+
+  def douban_img_url_from(doc)
+    Nokogiri::Slop(doc).
+      xpath('//a').
+      select { |item| item.to_s.match /.nbg/ }.
+      first.img.attr(:src)
   end
 
 end
@@ -114,6 +123,11 @@ module GetHtmlStr
     data = 'bar_code=' + book_id
     html_str = http.post(path, data, headers).body
     Nokogiri::HTML(html_str).xpath('//font').text
+  end
+
+  def get_douban_book_html(name)
+    url = URI(URI::escape("http://book.douban.com/subject_search?search_text=" + name))
+    Net::HTTP.get_response(url).body
   end
 
 end
