@@ -44,8 +44,8 @@ module ParseHtml
       tds.pop
       item_hash = {}
       tds.map.with_index { |t, i| item_hash[list_titles[i]] = t.content.strip }
-      item_hash["description"] = book_description_str(get_book_detail_doc href_list[index])
-      item_hash["img_url"] = douban_img_url_from(get_douban_book_html(item_hash["title"]))
+      item_hash["description"] = book_description_str(get_res_body_of href_list[index])
+      item_hash["img_url"] = douban_img_url_from(get_res_body_of douban_book_herf(get_douban_book_html(item_hash["title"])))
       book_list_arr << item_hash
     end
 
@@ -67,11 +67,15 @@ module ParseHtml
     desc = Nokogiri::Slop(doc).div(css: "#s_c_left .booklist dd")[-2].content
   end
 
+  def douban_book_herf(doc)
+    Nokogiri::Slop(doc).xpath('//h2 //a').first.attr(:href)
+  end
+
   def douban_img_url_from(doc)
     Nokogiri::Slop(doc).
       xpath('//a').
       select { |item| item.to_s.match /.nbg/ }.
-      first.img.attr(:src)
+      first.attr(:href)
   end
 
 end
@@ -83,7 +87,7 @@ module Login
         number +
         "&passwd=" + 
         passwd)			
-      res = get_login_res(login_uri)
+      res = Net::HTTP.get_response(login_uri)
     @cookie = res['Set-Cookie']		
 		
     if (html_login? res.body)
@@ -97,9 +101,6 @@ end
 
 module GetHtmlStr
 
-  def get_login_res(url)
-    Net::HTTP.get_response(url)
-  end
 
   def get_list_doc(url, cookie)
     http = Net::HTTP.new("202.119.228.6", 8080)
@@ -112,7 +113,7 @@ module GetHtmlStr
     http.post(path, nil, headers).body
   end
 
-  def get_book_detail_doc(href)
+  def get_res_body_of(href)
     Net::HTTP.get_response(URI(href)).body
   end
 
