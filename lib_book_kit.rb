@@ -2,6 +2,7 @@
 require 'net/http'
 require 'nokogiri'
 require 'json'
+require 'open-uri'
 
 module ParseHtml
   def html_login?(html_str = "")
@@ -44,8 +45,10 @@ module ParseHtml
       tds.pop
       item_hash = {}
       tds.map.with_index { |t, i| item_hash[list_titles[i]] = t.content.strip }
-      item_hash["description"] = book_description_str(get_res_body_of href_list[index])
-      item_hash["img_url"] = douban_img_url_from(get_res_body_of douban_book_herf(get_douban_book_html(item_hash["title"])))
+      detail_html = get_res_body_of href_list[index]
+      item_hash["description"] = book_description_str(detail_html)
+      douban_img_url = douban_img_url_from(get_res_body_of douban_isbn_href_form(detail_html))
+      item_hash["img_url"] = douban_img_url.match(/img/) ? douban_img_url : nil
       book_list_arr << item_hash
     end
 
@@ -64,11 +67,15 @@ module ParseHtml
   end	
 
   def book_description_str(doc)
-    desc = Nokogiri::Slop(doc).div(css: "#s_c_left .booklist dd")[-2].content
+    Nokogiri::Slop(doc).div(css: "#s_c_left .booklist dd")[-2].content
   end
 
   def douban_book_herf(doc)
     Nokogiri::Slop(doc).xpath('//h2 //a').first.attr(:href)
+  end
+
+  def douban_isbn_href_form(doc)
+    Nokogiri::Slop(doc).div(css: "#s_c_left .booklist dd a")[-4].attr(:href)
   end
 
   def douban_img_url_from(doc)
@@ -100,8 +107,6 @@ module Login
 end
 
 module GetHtmlStr
-
-
   def get_list_doc(url, cookie)
     http = Net::HTTP.new("202.119.228.6", 8080)
     path = '/reader/book_lst.php'
@@ -114,7 +119,7 @@ module GetHtmlStr
   end
 
   def get_res_body_of(href)
-    Net::HTTP.get_response(URI(href)).body
+    open(href).read
   end
 
   def get_renew_result(url, cookie, book_id)
